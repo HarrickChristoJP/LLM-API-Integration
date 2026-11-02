@@ -1,0 +1,241 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jarvis AI Assistant</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #111827;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 750px;
+            height: 85vh;
+            background: #1f2937;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        header {
+            padding: 20px;
+            background: #2563eb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h2 {
+            margin: 0;
+        }
+
+        #new-chat {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        #chat-box {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .message {
+            padding: 12px 15px;
+            margin-bottom: 12px;
+            border-radius: 10px;
+            max-width: 80%;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+
+        .user {
+            background: #2563eb;
+            margin-left: auto;
+        }
+
+        .bot {
+            background: #374151;
+            margin-right: auto;
+        }
+
+        form {
+            display: flex;
+            padding: 15px;
+            gap: 10px;
+            background: #111827;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        #send {
+            padding: 12px 20px;
+            border: none;
+            background: #2563eb;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        #send:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+
+        <header>
+            <h2>🤖 Jarvis AI</h2>
+            <button id="new-chat">New Chat</button>
+        </header>
+
+        <div id="chat-box">
+            <div class="message bot">
+                Hello! I'm Jarvis. How can I help you today?
+            </div>
+        </div>
+
+        <form id="chat-form">
+            <input
+                type="text"
+                id="message"
+                placeholder="Message Jarvis..."
+                autocomplete="off"
+                required
+            >
+
+            <button type="submit" id="send">Send</button>
+        </form>
+
+    </div>
+
+    <script>
+        const chatBox = document.getElementById("chat-box");
+        const form = document.getElementById("chat-form");
+        const messageInput = document.getElementById("message");
+        const sendButton = document.getElementById("send");
+        const newChatButton = document.getElementById("new-chat");
+
+        function createConversationId() {
+            return "web-" + Date.now() + "-" +
+                Math.random().toString(16).slice(2);
+        }
+
+        let conversationId =
+            localStorage.getItem("jarvis_conversation_id");
+
+        if (!conversationId) {
+            conversationId = createConversationId();
+            localStorage.setItem(
+                "jarvis_conversation_id",
+                conversationId
+            );
+        }
+
+        function addMessage(text, sender) {
+            const message = document.createElement("div");
+
+            message.classList.add("message", sender);
+            message.textContent = text;
+
+            chatBox.appendChild(message);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        form.addEventListener("submit", async function(event) {
+            event.preventDefault();
+
+            const message = messageInput.value.trim();
+
+            if (!message) {
+                return;
+            }
+
+            addMessage(message, "user");
+
+            messageInput.value = "";
+            sendButton.disabled = true;
+
+            try {
+                const response = await fetch("/chat", {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        conversation_id: conversationId,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || "Request failed");
+                }
+
+                addMessage(data.reply, "bot");
+
+            } catch (error) {
+                addMessage(
+                    "Sorry, something went wrong. Please try again.",
+                    "bot"
+                );
+
+                console.error(error);
+
+            } finally {
+                sendButton.disabled = false;
+                messageInput.focus();
+            }
+        });
+
+        newChatButton.addEventListener("click", function() {
+            conversationId = createConversationId();
+
+            localStorage.setItem(
+                "jarvis_conversation_id",
+                conversationId
+            );
+
+            chatBox.innerHTML = "";
+
+            addMessage(
+                "Hello! I'm Jarvis. How can I help you today?",
+                "bot"
+            );
+        });
+    </script>
+
+</body>
+</html>
